@@ -1,26 +1,72 @@
-import React from 'react';
-import logo from './logo.svg';
 import './App.css';
 
-function App() {
+import React, { useEffect, useReducer, useState } from 'react';
+import { Route, Routes } from 'react-router-dom';
+
+import AuthRoute from './components/AuthRoute';
+import LoadingComponent from './components/LoadingComponent';
+import masterRoutes from './config/routes';
+import {
+	initialUserState,
+	UserContextProvider,
+	userReducer,
+} from './context/user';
+
+export interface IAppProps {}
+
+const App: React.FunctionComponent<IAppProps> = (props) => {
+  const [ userState,userDispatch ] = useReducer(userReducer,initialUserState)
+  const [ loading, setLoading ] = useState<boolean>(true)
+
+  useEffect(()=> {
+    CheckLocalStorageCredentials()
+  },[])
+
+  const CheckLocalStorageCredentials = () => {
+    const token = localStorage.getItem('token')
+    if(token == null) {
+      userDispatch({ type: 'logout', payload: initialUserState})
+      setLoading(false)
+    }else {
+      setLoading(false)
+    }
+  }
+
+  const userContextValue = {
+    userState,
+    userDispatch
+  }
+
+  if(loading) {
+    return <LoadingComponent> Laoding </LoadingComponent>
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+      <UserContextProvider value = { userContextValue }>
+        <Routes>
+          {masterRoutes.map((route,index) => {
+            if(route.auth) {
+              <Route
+                key = {index}
+                path = {route.path}
+                element = {
+                  <AuthRoute>
+                    <route.component props = {route.props}/>
+                  </AuthRoute>
+                }
+              />
+            }
+            return(
+              <Route
+                key = {index}
+                path = {route.path}
+                element = {<route.component props = {route.props}/>}
+              />
+            )
+          })}
+        </Routes>
+      </UserContextProvider>
+  )
 }
 
 export default App;
